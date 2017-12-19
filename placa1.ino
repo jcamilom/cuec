@@ -1,4 +1,3 @@
-#include <Key.h>
 #include <SoftwareSerial.h> // Libreria de manejo de comunicacion serial alterna
 #include <Wire.h>
 #include <LiquidCrystal_I2C.h> //libreria del i2c para la comunicacion simplificada del display
@@ -17,7 +16,7 @@ static const unsigned char L_D_ASCII = 68;  // Valor en ascii de "D"
 // Prototipo de funciones
 int powint(int, int);
 void getLoteNumber();
-int processLoteNumber();
+void processLoteNumber();
 void lectura_datos();
 void initLCD();
 
@@ -43,6 +42,7 @@ unsigned long areaLote;                 // Sumatoria areas de lote
 bool cueroListo;
 bool blinkingLed;                       // Para avisar cuando acabae lote
 bool startLectura;                      // Quitar luego
+bool trash = false;
 
 /* Configuración del LCD */
 LiquidCrystal_I2C lcd(0x27, 20, 4);
@@ -71,29 +71,42 @@ Keypad teclado = Keypad(makeKeymap(teclas), pinesF, pinesC, filas, columnas); //
 
 
 void setup() {
+
+    //Initialize serial and wait for port to open:
+    Serialvirt.begin(9600); // Velocidad de comunicacion del otroarduino
+    while (!Serialvirt) {
+        ; // wait for serial port to connect. Needed for native USB
+    }
+    // Wait until the trash data pass
+    /* while(true) {
+        if(Serialvirt.available() > 1) {
+            byte b1 = Serialvirt.read();
+            byte b2 = Serialvirt.read();
+            unsigned int dato = ((unsigned int)b1) * 256 + b2;
+
+            if(dato != 0) {
+                trash = true;
+            } else if(trash) {
+                break;
+            }
+        }
+    } */
+
     lcd.init(); // initialize the lcd 
     lcd.init();
     lcd.backlight();
     initLCD();
-    Serial.begin(9600); // Velocidad de comunicacion con la PC
-    while (!Serial) {
-        ; // wait for serial port to connect. Needed for native USB port only
-    }
-    Serial.println("Seria listo!");
-
-    // set the data rate for the SoftwareSerial port
-    Serialvirt.begin(9600); // Velocidad de comunicacion del otroarduino
 
     pinMode(8, INPUT);
     // set the digital pin as output:
-    pinMode(ledPin, OUTPUT);
+    pinMode(ledPin, OUTPUT);   
 
     // Variables
     menu = 0;
     lote = 0;
     nDigitos = 0;
     leerDatos = false;
-    area = 1;
+    area = 0;
     areaFinal = 0;
     cueroListo = false;
     areaLote = 0;
@@ -125,56 +138,78 @@ void loop() {
                     lcd.print("/    ");
 
                     menu = 1;
-                }
-                // Tecla B. Se inicia getArea sin lote
-                else if(tecla == L_B_ASCII) {
-                    //modoLote = false;
-                    //startLectura = true;
-                    //Serial.print("Medición sin lote\n");
-                }
+                }                
                 break;
 
             // Se pide el valor del lote
             case 1:
                 getLoteNumber();
-                break;
-
-            // Lectura de datos
-            case 10:
-                if(tecla == N_0_ASCII) {
-                    area = 0;
-                    Serial.print("Se pulsó cero en Menu10\n");
-                } else if(tecla == L_AST_ASCII) {
-                    area = 1;
-                }
-                break;
+                break;            
 
             default:
                 break;
         }
     }
 
-    if(Serialvirt.available() > 0) {
-        Serial.print("Se recibe por serial: ");
-        Serial.println(Serialvirt.read());
-    }
-
     // Se leen datos con el modoLote desactivado
     //if(!modoLote && (Serialvirt.available() > 0)) {
-    if(!modoLote && (Serialvirt.available() > 0)) {
+    /* if(!modoLote && (Serialvirt.available() > 0)) {
         initLCD();
         leerDatos = true;
         menu = 0; // quitar luego
         //area = 1;
         //areaFinal = 0;
-        Serial.print("Medición sin lote2\n");
+        //Serial.print("Medición sin lote2\n");
         //startLectura = false;
+    } */
+
+    //if(leerDatos && (Serialvirt.available() > 1)) {
+    //if(leerDatos && (Serialvirt.available() > 0)) {
+    if((Serialvirt.available() > 1)) {
+        lectura_datos();
+
+        /* byte b11 = Serialvirt.read();
+        byte b22 = Serialvirt.read();
+
+        unsigned int arr = (b11 * 256) + b22;
+
+        if(arr != 0) {
+            Serialvirt.println(arr);
+            Serialvirt.print("MSB (b1): ");
+            Serialvirt.print(b11);
+            Serialvirt.print(", LSB (b2): ");
+            Serialvirt.print(b22);
+            Serialvirt.println();
+        } */
     }
 
-    if(leerDatos && (Serialvirt.available() > 0)) {
-    //if(leerDatos) {
-        lectura_datos();
-    }
+/*     if(Serialvirt.available() > 1) {
+        byte b1 = Serialvirt.read();
+        byte b2 = Serialvirt.read();
+
+        unsigned int areaInt = ((unsigned int)b1) * 256 + b2;
+        
+        // Limipia area en LCD
+        lcd.setCursor(6, 0);
+        lcd.print("     ");
+        // Imprime dato en LCD
+        lcd.setCursor(6, 0);
+        lcd.print(b1);
+
+        // Limipia area en LCD
+        lcd.setCursor(13, 1);
+        lcd.print("     ");
+        // Imprime dato en LCD
+        lcd.setCursor(13, 1);
+        lcd.print(b2);
+
+        // Limipia area en LCD
+        lcd.setCursor(6, 2);
+        lcd.print("     ");
+        // Imprime dato en LCD
+        lcd.setCursor(6, 2);
+        lcd.print(areaInt);
+    } */
 
     if(blinkingLed) {
        unsigned long currentMillis = millis();
@@ -203,7 +238,7 @@ void getLoteNumber() {
         lcd.setCursor(6 + nDigitos, 2);
         lcd.print(loteArray[nDigitos]);
         if (nDigitos != MAX_DIG_LOTE - 1) lcd.print("/");   // Se imprime "-" si no es el último dígito permitido
-        Serial.println(loteArray[nDigitos]);
+        //Serial.println(loteArray[nDigitos]);
         nDigitos++;
     }
     // Se borra el último dígito, si existe alguno
@@ -220,8 +255,6 @@ void getLoteNumber() {
         lote = 0;                    
         processLoteNumber();
         leerDatos = false;
-
-        menu = 10;
     }
     // Se procesa el valor ingresado
     else if(tecla == L_B_ASCII) {
@@ -233,7 +266,7 @@ void getLoteNumber() {
     }
 }
 
-int processLoteNumber() {
+void processLoteNumber() {
     // Computa el valor del lote
     for (byte i = nDigitos; i > 0; i--) {
         lote = lote + loteArray[i - 1] * powint(10, nDigitos - i);            
@@ -250,11 +283,7 @@ int processLoteNumber() {
         
         // Necesario para caso en que no se ingresaron dígitos
         modoLote = false;
-
-        Serial.print("Ningun valor ingresado ó modo lote == false\n");
-
-        menu = 0;
-        return 1;
+        
     }
     // Borra "/" cuando hubo menos de MAX_DIG_LOTE dígitos
     else if (nDigitos != MAX_DIG_LOTE) {
@@ -262,24 +291,48 @@ int processLoteNumber() {
         lcd.print(" ");
     }
 
-    menu = 10;
-
-    Serial.print("El valor ingresado fue: ");
-    Serial.print(lote);
-    Serial.println();
-
-    return 0;
+    menu = 0;    
 }
 
 void lectura_datos() {
-    //Serial.print("Entrada a lectura de datos");
-    //Serial.println(area);
     // Lee dato enviado
-    area = Serialvirt.read();
-    //if(area != 0) area = area + 1;
+    byte b1 = Serialvirt.read();
+    byte b2 = Serialvirt.read();
 
+    unsigned int arr = (b1 * 256) + b2;
+
+    if(arr != 0) {
+        Serialvirt.println(arr);
+        Serialvirt.print("MSB (b1): ");
+        Serialvirt.print(b1);
+        Serialvirt.print(", LSB (b2): ");
+        Serialvirt.print(b2);
+        Serialvirt.println();
+    }
+
+    // Limipia area en LCD
+    lcd.setCursor(6, 0);
+    lcd.print("     ");
+    // Imprime dato en LCD
+    lcd.setCursor(6, 0);
+    lcd.print(b1);
+
+    // Limipia area en LCD
+    lcd.setCursor(13, 1);
+    lcd.print("     ");
+    // Imprime dato en LCD
+    lcd.setCursor(13, 1);
+    lcd.print(b2);
+
+    // Limipia area en LCD
+    lcd.setCursor(6, 2);
+    lcd.print("     ");
+    // Imprime dato en LCD
+    lcd.setCursor(6, 2);
+    lcd.print(arr);
+    
     // No se ha completado un cuero
-    if(area != 0) {
+    /* if(area != 0) {
         // Se actualiza area previa
         if(cueroListo) {
             // Limpia valor anterior areaPrevia LCD
@@ -289,21 +342,22 @@ void lectura_datos() {
             lcd.print(areaFinal);
 
             areaFinal = 0;
+
+            cueroListo = false;
         }
 
-        // Se acumula el area del cuero actual y se imprime
-        areaFinal = areaFinal + area;
+        // Se guarda el area del cuero actual y se imprime
+        areaFinal = area;        
+
         // Limipia area en LCD
         lcd.setCursor(6, 0);
         lcd.print("     ");
         // Imprime dato en LCD
         lcd.setCursor(6, 0);
-        lcd.print(areaFinal);       
-
-        cueroListo = false;
-    }
+        lcd.print(areaFinal);        
+    } */
     // Final cuero
-    else if(!cueroListo) {
+    /* else if(!cueroListo) {
 
         // Espera de una nueva lectura de area != 0
         cueroListo = true;
@@ -339,7 +393,7 @@ void lectura_datos() {
             cueroListo = true;
             blinkingLed = false;
         }
-    }
+    } */
 
 }
 
