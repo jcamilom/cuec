@@ -6,6 +6,7 @@
 
 // Constantes
 static const byte MAX_DIG_LOTE = 4;         // Máximo dígitos permitido para lote
+static const unsigned char L_AST_ASCII = 42;  // Valor en ascii de "*"
 static const unsigned char N_0_ASCII = 48;  // Valor en ascii de "0" 
 static const unsigned char N_9_ASCII = 57;  // Valor en ascii de "9"
 static const unsigned char L_A_ASCII = 65;  // Valor en ascii de "A"
@@ -16,7 +17,9 @@ static const unsigned char L_D_ASCII = 68;  // Valor en ascii de "D"
 // Prototipo de funciones
 int powint(int, int);
 void getLoteNumber();
-void processLoteNumber();
+int processLoteNumber();
+void lectura_datos();
+void initLCD();
 
 /* Variables globales */
 // Teclado
@@ -25,8 +28,21 @@ unsigned char nDigitos;                 // Contador de digitos ingresados
 unsigned char loteArray[MAX_DIG_LOTE];      // Guarda los dígitos ingresados
 unsigned int lote;                      // Guarda el valor de lote
 unsigned char tecla;                        // Tecla ingresada
+// LED
+const int ledPin =  LED_BUILTIN;        // the number of the LED pin
+int ledState = LOW;                     // ledState used to set the LED
+unsigned long previousMillis = 0;       // will store last time LED was updated
+const long interval = 1000;             // interval at which to blink (milliseconds)
 // Menu
 unsigned char menu;                     // Menu como máquina de estados
+bool leerDatos;
+// Variables de lectura
+unsigned int area;                      // Lectura de acumulado mismo cuero
+unsigned int areaFinal;                 // Valor total mismo cuero
+unsigned long areaLote;                 // Sumatoria areas de lote
+bool cueroListo;
+bool blinkingLed;                       // Para avisar cuando acabae lote
+bool startLectura;                      // Quitar luego
 
 /* Configuración del LCD */
 LiquidCrystal_I2C lcd(0x27, 20, 4);
@@ -54,29 +70,35 @@ char teclas[filas][columnas] = {
 Keypad teclado = Keypad(makeKeymap(teclas), pinesF, pinesC, filas, columnas); //pone a funcionar lo de la libreria
 
 
-
-
-
 void setup() {
     lcd.init(); // initialize the lcd 
     lcd.init();
     lcd.backlight();
-    lcd.setCursor(0, 0);
-    lcd.print("AREA: ----");
-    lcd.setCursor(0, 1);
-    lcd.print("AREA PREVIA: ----");
-    lcd.setCursor(0, 2);
-    lcd.print("LOTE: ----");
-    lcd.setCursor(0, 3);
-    lcd.print("AREA TOTAL: ----");
+    initLCD();
     Serial.begin(9600); // Velocidad de comunicacion con la PC
-    pinMode(8, INPUT);
+    while (!Serial) {
+        ; // wait for serial port to connect. Needed for native USB port only
+    }
+    Serial.println("Seria listo!");
+
+    // set the data rate for the SoftwareSerial port
     Serialvirt.begin(9600); // Velocidad de comunicacion del otroarduino
+
+    pinMode(8, INPUT);
+    // set the digital pin as output:
+    pinMode(ledPin, OUTPUT);
 
     // Variables
     menu = 0;
     lote = 0;
     nDigitos = 0;
+    leerDatos = false;
+    area = 1;
+    areaFinal = 0;
+    cueroListo = false;
+    areaLote = 0;
+    blinkingLed = false;
+    startLectura = false;
 }
 
 void loop() {    
@@ -95,18 +117,20 @@ void loop() {
                     nDigitos = 0;
                     lote = 0;
 
-                    // Limpia lote anterior del LCD ó "desactivado"
+                    // Limpia el LCD
+                    initLCD();
+
+                    // Pone el cursor
                     lcd.setCursor(6, 2);
-                    lcd.print("/          ");
-                    // Limpia el valor anterior de área
-                    lcd.setCursor(6, 0);
-                    lcd.print("----");
+                    lcd.print("/    ");
 
                     menu = 1;
                 }
                 // Tecla B. Se inicia getArea sin lote
                 else if(tecla == L_B_ASCII) {
-                    menu = 10;
+                    //modoLote = false;
+                    //startLectura = true;
+                    //Serial.print("Medición sin lote\n");
                 }
                 break;
 
@@ -115,18 +139,61 @@ void loop() {
                 getLoteNumber();
                 break;
 
+            // Lectura de datos
+            case 10:
+                if(tecla == N_0_ASCII) {
+                    area = 0;
+                    Serial.print("Se pulsó cero en Menu10\n");
+                } else if(tecla == L_AST_ASCII) {
+                    area = 1;
+                }
+                break;
+
             default:
                 break;
         }
     }
-/*
 
-    //if (Serialvirt.available()) { // Verificacion que el puerto serial virtual recibe datos
-    if (true) { // Pruebas Camilo; comentar cuando se conecte el otro arduino
-        //delay(1);                   
-        lectura_datos(); // ejecute la funcion llamada "lectura_datos"
-    } //dejo de leer que habia en el puerto */
+    if(Serialvirt.available() > 0) {
+        Serial.print("Se recibe por serial: ");
+        Serial.println(Serialvirt.read());
+    }
 
+    // Se leen datos con el modoLote desactivado
+    //if(!modoLote && (Serialvirt.available() > 0)) {
+    if(!modoLote && (Serialvirt.available() > 0)) {
+        initLCD();
+        leerDatos = true;
+        menu = 0; // quitar luego
+        //area = 1;
+        //areaFinal = 0;
+        Serial.print("Medición sin lote2\n");
+        //startLectura = false;
+    }
+
+    if(leerDatos && (Serialvirt.available() > 0)) {
+    //if(leerDatos) {
+        lectura_datos();
+    }
+
+    if(blinkingLed) {
+       unsigned long currentMillis = millis();
+
+        if (currentMillis - previousMillis >= interval) {
+            // save the last time you blinked the LED
+            previousMillis = currentMillis;
+
+            // if the LED is off turn it on and vice-versa:
+            if (ledState == LOW) {
+                ledState = HIGH;
+            } else {
+                ledState = LOW;
+            }
+
+            // set the LED with the ledState of the variable:
+            digitalWrite(ledPin, ledState);
+        } 
+    }
 }
 
 void getLoteNumber() {
@@ -152,18 +219,21 @@ void getLoteNumber() {
         nDigitos = 0;
         lote = 0;                    
         processLoteNumber();
+        leerDatos = false;
 
-        menu = 0;
+        menu = 10;
     }
     // Se procesa el valor ingresado
     else if(tecla == L_B_ASCII) {
         processLoteNumber();
-        
-        menu = 0;
+        if(modoLote) {
+            leerDatos = true;
+            blinkingLed = false;
+        }
     }
 }
 
-void processLoteNumber() {
+int processLoteNumber() {
     // Computa el valor del lote
     for (byte i = nDigitos; i > 0; i--) {
         lote = lote + loteArray[i - 1] * powint(10, nDigitos - i);            
@@ -180,6 +250,11 @@ void processLoteNumber() {
         
         // Necesario para caso en que no se ingresaron dígitos
         modoLote = false;
+
+        Serial.print("Ningun valor ingresado ó modo lote == false\n");
+
+        menu = 0;
+        return 1;
     }
     // Borra "/" cuando hubo menos de MAX_DIG_LOTE dígitos
     else if (nDigitos != MAX_DIG_LOTE) {
@@ -187,36 +262,97 @@ void processLoteNumber() {
         lcd.print(" ");
     }
 
+    menu = 10;
+
     Serial.print("El valor ingresado fue: ");
     Serial.print(lote);
     Serial.println();
 
-    if (modoLote) {
-        lcd.setCursor(6, 0);
-        lcd.print("0            ");
-    }
+    return 0;
 }
 
-/* void lectura_datos() { // funcion lectura del otro arduino
-    Serial.println("Leyendo datos...");
-    delay(5000);
-    //lecturadelotroarduino = Serialvirt.read(); // Lectura de lo que el otro arduino quiere que yo lea   
-    lecturadelotroarduino = 20;
+void lectura_datos() {
+    //Serial.print("Entrada a lectura de datos");
+    //Serial.println(area);
+    // Lee dato enviado
+    area = Serialvirt.read();
+    //if(area != 0) area = area + 1;
 
-    if (lecturadelotroarduino != 0) {
-        area = lecturadelotroarduino;
-        b = 0;
+    // No se ha completado un cuero
+    if(area != 0) {
+        // Se actualiza area previa
+        if(cueroListo) {
+            // Limpia valor anterior areaPrevia LCD
+            lcd.setCursor(13, 1);
+            lcd.print("     ");
+            lcd.setCursor(13, 1);
+            lcd.print(areaFinal);
+
+            areaFinal = 0;
+        }
+
+        // Se acumula el area del cuero actual y se imprime
+        areaFinal = areaFinal + area;
+        // Limipia area en LCD
         lcd.setCursor(6, 0);
-        lcd.print("             ");
-        delay(1);
+        lcd.print("     ");
+        // Imprime dato en LCD
         lcd.setCursor(6, 0);
-        lcd.print(lecturadelotroarduino);
+        lcd.print(areaFinal);       
+
+        cueroListo = false;
+    }
+    // Final cuero
+    else if(!cueroListo) {
+
+        // Espera de una nueva lectura de area != 0
+        cueroListo = true;
+
+        // Se acumulan las areas
+        if(modoLote) {
+            // Se imprime valor area total
+            areaLote = areaLote + (long)areaFinal;
+            lcd.setCursor(12, 3);
+            lcd.print("      ");
+            lcd.setCursor(12, 3);
+            lcd.print(areaLote);
+            // Se imprime valor del lote
+            lote--;
+            lcd.setCursor(6, 2);
+            lcd.print(lote);
+        }
+
+        // Mirar si se acabó el lote ó no hay lote
+        if(lote == 0 && modoLote) {
+            // Terminar lote
+            leerDatos = false;
+            menu = 0;
+            cueroListo = false;
+            blinkingLed = true;
+            // Se imprime el valor final del lote
+            lcd.setCursor(12, 3);
+            lcd.print(areaLote);
+        }
+        else if(!modoLote) {
+            leerDatos = false;
+            menu = 0;
+            cueroListo = true;
+            blinkingLed = false;
+        }
     }
 
-    if ((lecturadelotroarduino == 0) && (b == 0)) {
+}
 
-    }
-} */
+void initLCD() {
+    lcd.setCursor(0, 0);
+    lcd.print("AREA: ----");
+    lcd.setCursor(0, 1);
+    lcd.print("AREA PREVIA: ----");
+    lcd.setCursor(0, 2);
+    lcd.print("LOTE: ----");
+    lcd.setCursor(0, 3);
+    lcd.print("AREA TOTAL: ----");
+}
 
 int powint(int x, int y) {
     int val = x;
