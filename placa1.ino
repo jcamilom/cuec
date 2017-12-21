@@ -69,12 +69,13 @@ char teclas[filas][columnas] = {
     {'*','0','#','D'}
 };
 
-Keypad teclado = Keypad(makeKeymap(teclas), pinesF, pinesC, filas, columnas); //pone a funcionar lo de la libreria
+// Pone a funcionar lo de la libreria
+Keypad teclado = Keypad(makeKeymap(teclas), pinesF, pinesC, filas, columnas);
 
 
 void setup() {
 
-    //Initialize serial and wait for port to open:
+    // Initialize serial and wait for port to open:
     Serialvirt.begin(9600); // Velocidad de comunicacion del otroarduino
     while (!Serialvirt) {
         ; // wait for serial port to connect. Needed for native USB
