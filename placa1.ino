@@ -12,6 +12,8 @@ static const unsigned char L_A_ASCII = 65;  // Valor en ascii de "A"
 static const unsigned char L_B_ASCII = 66;  // Valor en ascii de "B"
 static const unsigned char L_C_ASCII = 67;  // Valor en ascii de "C"
 static const unsigned char L_D_ASCII = 68;  // Valor en ascii de "D"
+static const unsigned char STX_ASCII = 123; // Valor en ascii de "{"
+static const unsigned char ETX_ASCII = 125; // Valor en ascii de "}"
 
 // Prototipo de funciones
 int powint(int, int);
@@ -36,7 +38,7 @@ const long interval = 1000;             // interval at which to blink (milliseco
 unsigned char menu;                     // Menu como máquina de estados
 bool leerDatos;
 // Variables de lectura
-unsigned int area;                      // Lectura de acumulado mismo cuero
+float area;                      // Lectura de acumulado mismo cuero
 unsigned int areaFinal;                 // Valor total mismo cuero
 unsigned long areaLote;                 // Sumatoria areas de lote
 bool cueroListo;
@@ -148,6 +150,30 @@ void loop() {
 
             default:
                 break;
+        }
+    }
+
+    if(Serialvirt.available() > 0) {
+        byte incomingByte = Serialvirt.read();
+
+        // Inicio de trama
+        if(incomingByte == STX_ASCII) {
+            area = 0;
+        }
+        // Fin de trama
+        else if(incomingByte == ETX_ASCII) {
+            areaFinal = (unsigned int)area;
+
+            // Limipia area en LCD
+            lcd.setCursor(6, 0);
+            lcd.print("     ");
+            // Imprime dato en LCD
+            lcd.setCursor(6, 0);
+            lcd.print(areaFinal);
+        }
+        // Dato de trama
+        else {
+            area = area + ((float)incomingByte * 2.54 * 2.54 / 100)
         }
     }
 
