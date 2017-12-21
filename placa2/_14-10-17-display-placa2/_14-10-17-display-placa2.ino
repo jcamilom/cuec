@@ -99,12 +99,18 @@ void loop() {
             tramaStarted = false;
         }
 
-        //area=area+((conteodeapagadosporpulso*2.54*2.54)/100.0);  //como el conteodeapagadosporpulso se reinicia cuando empieza otra barrida, "area" irá almacenando ese conteo pero ya convertido en decimas cuadradas 
+        area=area+((conteodeapagadosporpulso*2.54*2.54)/100.0);  //como el conteodeapagadosporpulso se reinicia cuando empieza otra barrida, "area" irá almacenando ese conteo pero ya convertido en decimas cuadradas 
         //delay(1);
-        /* Serial.write(int(area));
+        int intArea = (int)area;
+        if(intArea != 0) {
+            Serial.print("Area a enviar: ");
+            Serial.print(intArea);
+            Serial.println();
+        }
+        
         if (conteodeapagadosporpulso==0){ //si al hacer la barrida conto que todos los focos estaban prendidos, entonces reinicie el proceso de sumas de areas pues se considera que ya conto el area de una pieza, esto se hace obviamente dentro de la lectura del sensor en diente
           area=0;
-        } */
+        }
     } //hasta aqui llega las ordenes que se dan cuando el sensor registra un diente del piñon.
 
     while (lectura == 0) { // este while es muy importante, porque si el sensor habia acabado de registrar un diente, entonces impide que vuelva a ejecutar las ordenes de ese suceso para un mismo diente
