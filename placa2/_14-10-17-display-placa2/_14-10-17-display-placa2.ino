@@ -73,11 +73,11 @@ void loop() {
             digitalWrite(myPins[i], LOW); //apaga la fuente y se reinicia el proceso pero con otra fuente
         } //hasta aqui ya se hizo la barrida de los 64 focos, se almacena por cada barrida el numero de focos apagados (conteodeapagadosporpulso) y se reinicia cuando empiece otra barrida
 
-        if(conteodeapagadosporpulso != 0) {
+   /*      if(conteodeapagadosporpulso != 0) {
             Serial.print("Dato a enviar: ");
             Serial.print(conteodeapagadosporpulso);
             Serial.println();
-        }
+        } */
 
         // No se ha iniciado trama y se lee cero
         if (conteodeapagadosporpulso == 0 && !tramaStarted) {
@@ -96,6 +96,7 @@ void loop() {
         // Dato = 0 y se habia iniciado trama -> Finalizar trama
         else if (conteodeapagadosporpulso == 0 && tramaStarted) {
             Serial.write(ETX_ASCII);
+            tramaStarted = false;
         }
 
         //area=area+((conteodeapagadosporpulso*2.54*2.54)/100.0);  //como el conteodeapagadosporpulso se reinicia cuando empieza otra barrida, "area" irá almacenando ese conteo pero ya convertido en decimas cuadradas 
