@@ -173,7 +173,13 @@ void loop() {
         }
         // Dato de trama
         else {
-            area = area + ((float)incomingByte * 2.54 * 2.54 / 100)
+            area = area + ((float)incomingByte * 2.54 * 2.54 / 100);
+            // Limipia area en LCD
+            lcd.setCursor(6, 2);
+            lcd.print("     ");
+            // Imprime dato en LCD
+            lcd.setCursor(6, 2);
+            lcd.print(area);
         }
     }
 
