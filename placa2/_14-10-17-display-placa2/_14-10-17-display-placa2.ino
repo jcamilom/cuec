@@ -7,8 +7,6 @@ static const unsigned char ETX_ASCII = 125; // Valor en ascii de "}", el fin de 
  */
 byte apagados;
 byte lectura;
-// ** puede ser borrada
-float area;
 // Defino en una lista los pines que funcionaran como pulsos
 unsigned int myPins[] = {13, 12, 11, 10, A0, A1, A2, A3};
 // Valor para guardar si se ha iniciado trama o no
@@ -44,7 +42,6 @@ void setup() {
     Serial.begin(9600); // Velocidad de comunicaciona serial
 
     apagados = 0;       // Asegurar que cada vez que arranca el programa este en cero
-    area = 0;           // Asegurar que cada vez que arranca el programa este en cero
     startingMachine = true;
     tramaStarted = false;
     count = 0;
@@ -112,29 +109,6 @@ void loop() {
         else if(apagados == 0 && tramaStarted) {
             Serial.write(ETX_ASCII);
             tramaStarted = false;
-        }
-
-        /**
-         * Como el apagados se reinicia cuando empieza otra barrida, "area"
-         * irá almacenando ese conteo pero ya convertido en decimas cuadradas 
-         */
-        area = area + ((apagados * 2.54 * 2.54) / 100.0);
-        //delay(1);
-
-        int intArea = (int)area;
-        /* if(intArea != 0) {
-            Serial.print("Area a enviar: ");
-            Serial.print(intArea);
-            Serial.println();
-        } */
-        
-        /**
-         * Si al hacer la barrida conto que todos los focos estaban prendidos, entonces
-         * reinicie el proceso de sumas de areas pues se considera que ya conto 
-         * el area de una pieza, esto se hace obviamente dentro de la lectura del sensor en diente.
-         */
-        if(apagados == 0) {
-            area = 0;
         }
     }
     // Hasta aqui llega las ordenes que se dan cuando el sensor registra un diente del piñon.
