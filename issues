@@ -1,0 +1,7 @@
+TODO
+cancelar un lote?
+
+DONE
+(S) se ignoran los 20 primeros ceros al iniciar la máquina
+(R) se imprime area previa para lote y no lote
+(R) se imprime areaLote para lote

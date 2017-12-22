@@ -12,7 +12,10 @@ float area;
 // Defino en una lista los pines que funcionaran como pulsos
 unsigned int myPins[] = {13, 12, 11, 10, A0, A1, A2, A3};
 // Valor para guardar si se ha iniciado trama o no
-bool tramaStarted = false;
+bool tramaStarted;
+// Valores para ignorar datos al encender la máquina
+bool startingMachine;
+byte count;
 
 void setup() {
     // Interrptor en este caso seria el sensor
@@ -42,7 +45,10 @@ void setup() {
 
     apagados = 0;       // Asegurar que cada vez que arranca el programa este en cero
     area = 0;           // Asegurar que cada vez que arranca el programa este en cero
-    delay(2000);
+    startingMachine = true;
+    tramaStarted = false;
+    count = 0;
+    //delay(2000);
 }
 
 void loop() {
@@ -84,9 +90,16 @@ void loop() {
             Serial.print(apagados);
             Serial.println();
         } */
-        
+
+        // Se entra cuando se prende la máquina y se empiezan a generar ceros
+        if(startingMachine && (apagados == 0)) {
+            // Se ignoran los 20 primeros ceros (no consecutivos)
+            count++;
+            if(count == 20) startingMachine = false;
+        }
+        // LÓGICA GENERAL DE LA MÁQUINA        
         // Dato != 0 y no se ha iniciado trama -> Se inicia una trama
-        if(apagados != 0 && !tramaStarted) {
+        else if(apagados != 0 && !tramaStarted) {
             tramaStarted = true;
             Serial.write(STX_ASCII);
             Serial.write(apagados);
