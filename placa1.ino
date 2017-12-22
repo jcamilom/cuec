@@ -36,6 +36,7 @@ unsigned long previousMillis;               // will store last time LED was upda
 const long interval = 1000;                 // interval at which to blink (milliseconds)
 // Menu
 unsigned char menu;                         // Menu como máquina de estados
+unsigned char cancelCount;                  // Para cancelar un lote
 // Variables de lectura
 float area;                                 // Lectura de acumulado mismo cuero
 unsigned int areaFinal;                     // Valor total mismo cuero
@@ -97,6 +98,7 @@ void setup() {
     modoLote = false;
     blinkingLed = false;
     areaPreviaExistente = false;
+    cancelCount = 0;
 }
 
 void loop() {    
@@ -115,6 +117,10 @@ void loop() {
                     lote = 0;
                     // Se evita que se escriba una area que ya no existe
                     areaPreviaExistente = false;
+
+                    // Se ingresa a menu de lote luego de ingresar una D en el menu principal.
+                    // Se resetea el contador
+                    if(cancelCount > 0) cancelCount = 0;
 
                     // Limpia el LCD
                     initLCD();
@@ -135,6 +141,23 @@ void loop() {
                     serialFlush();
                     // Se evita que se escriba una area que ya no existe
                     areaPreviaExistente = false;
+
+                    // Se presiona botón de desbloqueo luego de ingresar una D en el menu principal.
+                    // Se resetea el contador
+                    if(cancelCount > 0) cancelCount = 0;
+                }
+                // Tecla D. Cancela modoLote si está activo.
+                else if(tecla == L_D_ASCII) {
+                    if(modoLote) {
+                        cancelCount++;
+                        // Es necesario presionar dos veces la tecla D
+                        if(cancelCount == 2) {
+                            cancelCount = 0;
+                            modoLote = false;
+                            areaPreviaExistente = false;
+                            initLCD();
+                        }
+                    }
                 }
                 break;
 
@@ -151,6 +174,10 @@ void loop() {
     // Lectura de datos en modoLote || sin lote
     // El modo sin lote es bloqueado luego de terminar un lote. (Presionar "B" para activar)
     if((modoLote && (Serialvirt.available() > 0)) || (!blinkingLed && (Serialvirt.available() > 0))) {
+        // Si se lee un cuero habiendo pulsado una vez la D en el menu principal, resetear cancelCount
+        if(cancelCount > 0) cancelCount = 0;
+        
+        // Se leen los datos que ingresan
         lectura_datos();
     }
 
