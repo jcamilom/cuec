@@ -85,16 +85,16 @@ void loop() {
         // Hasta aqui ya se hizo la barrida de los 64 focos, se almacena por
         // cada barrida el numero de focos apagados (apagados) y se reinicia cuando empiece otra barrida
 
-        /* if(apagados != 0) {
+        /* if(apagados != 0) {        
             Serial.print("Dato a enviar: ");
             Serial.print(apagados);
             Serial.println();
         } */
 
         // Se entra cuando se prende la máquina y se empiezan a generar ceros
-        if(startingMachine && (apagados == 0)) {
+        if(startingMachine) {
             // Se ignoran los 20 primeros ceros (no consecutivos)
-            count++;
+            if(apagados == 0) count++;
             if(count == 20) startingMachine = false;
         }
         // LÓGICA GENERAL DE LA MÁQUINA        
@@ -122,11 +122,11 @@ void loop() {
         //delay(1);
 
         int intArea = (int)area;
-        if(intArea != 0) {
+        /* if(intArea != 0) {
             Serial.print("Area a enviar: ");
             Serial.print(intArea);
             Serial.println();
-        }
+        } */
         
         /**
          * Si al hacer la barrida conto que todos los focos estaban prendidos, entonces
