@@ -124,10 +124,6 @@ void loop() {
                     lcd.print("/    ");
 
                     menu = 1;
-                    
-                    // Tambien se deesbloquea lectura sin lote al intentar ingresar un lote
-                    blinkingLed = false;
-                    serialFlush();
                 }
                 // Tecla B. Desbloqueo luego de terminar un lote.
                 else if(tecla == L_B_ASCII) {
@@ -204,10 +200,8 @@ void getLoteNumber() {
         processLoteNumber();
         // Se va a empezar un lote
         if(modoLote) {
-            // Limpiar el buffer serial
-            serialFlush();
             // Poner "0" en area y areaLote
-            lcd.setCursor(6, 2);
+            lcd.setCursor(6, 0);
             lcd.print("0   ");
             lcd.setCursor(12, 3);
             lcd.print("0       ");
@@ -216,8 +210,11 @@ void getLoteNumber() {
 }
 
 void processLoteNumber() {
-    // Siempre se vuelve al menú principal al puslar la B
+    // Siempre se vuelve al menú principal al puslar la B ó D
     menu = 0;
+    // Tambien se deesbloquea lectura sin lote al intentar ingresar un lote
+    blinkingLed = false;
+    serialFlush();
 
     // Computa el valor del lote
     for(byte i = nDigitos; i > 0; i--) {
@@ -318,8 +315,11 @@ void lectura_datos() {
 }
 
 void serialFlush(){
-    while(Serial.available() > 0) {
-        char t = Serial.read();
+    Serialvirt.println("Ingreso a serialFlush...");
+    while(Serialvirt.available() > 0) {
+        char t = Serialvirt.read();
+        Serialvirt.println("Flushing serial...");
+        Serialvirt.println(t);
     }
 }
 
